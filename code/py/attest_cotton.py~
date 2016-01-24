@@ -1,0 +1,225 @@
+import cv2
+import numpy as np
+import os
+import csv
+import time
+def testwrite(img,year,doy,plot, pfx):
+    oname = "../../pics/{}/{}/{}{}.JPG".format(year,doy,pfx,plot) 
+    retval=cv2.imwrite(oname,img)
+    print "Wrote ", oname, retval        
+
+def testread(year,doy,plot):
+    imname = "../../pics/{}/{}/{}.JPG".format(year,doy,plot) 
+    img = cv2.imread(imname)
+    if img==None:
+        imname = "../../pics/{}/{}/{}.jpg".format(year,doy,plot)
+        img = cv2.imread(imname)
+    if img==None:
+        imname = "../../pics/{}/{}/P{}.JPG".format(year,doy,plot)
+        img = cv2.imread(imname)
+    if img==None:
+        imname = "../../pics/{}/{}/p{}.JPG".format(year,doy,plot)
+        img = cv2.imread(imname)
+    if img != None:
+        print "Read ", imname
+    return img
+
+def nothing(x):
+    pass
+
+def normalize(x):
+    y=(x-np.min(x))/(np.max(x)-np.min(x))*255
+    return y
+def closing_adjust(mat):
+
+    kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+
+    cv2.namedWindow('close')
+    closing = cv2.morphologyEx(mat, cv2.MORPH_CLOSE, kernel)
+    cv2.createTrackbar('n','close',0,50,nothing)
+    while(1):
+        cv2.imshow('close',closing)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+        n = cv2.getTrackbarPos('n','close')
+        kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*n+1,2*n+1))
+        closing = cv2.morphologyEx(mat, cv2.MORPH_CLOSE, kernel)
+
+    cv2.destroyAllWindows()
+
+    return closing, n
+
+def opening_adjust(mat):
+
+    kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+    cv2.namedWindow('open')
+    opening = cv2.morphologyEx(mat, cv2.MORPH_OPEN, kernel)
+    cv2.createTrackbar('n','open',0,50,nothing)
+    while(1):
+        cv2.imshow('open',opening*255)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+        n = cv2.getTrackbarPos('n','open')
+        kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*n+1,2*n+1))
+        opening = cv2.morphologyEx(mat, cv2.MORPH_OPEN, kernel)
+
+    cv2.destroyAllWindows()
+
+    return opening, n
+
+def thresh_adjust_inv(mat):
+    retval,thresh = cv2.threshold(mat,127,255,cv2.THRESH_BINARY_INV)
+    
+    cv2.namedWindow('thresh',cv2.WINDOW_NORMAL)
+    cv2.createTrackbar('T','thresh',0,255,nothing)
+    while(1):
+        cv2.imshow('thresh',thresh)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+            # get current positions of four trackbars
+        T = cv2.getTrackbarPos('T','thresh')
+        retval,thresh = cv2.threshold(mat,T,255,cv2.THRESH_BINARY_INV)    
+
+    retval,thresh = cv2.threshold(mat,T,1,cv2.THRESH_BINARY_INV)    
+    cv2.destroyAllWindows()
+
+    return thresh, T
+
+
+def thresh_adjust(mat):
+    retval,thresh = cv2.threshold(mat,127,255,cv2.THRESH_BINARY)
+    
+    cv2.namedWindow('thresh',cv2.WINDOW_NORMAL)
+    cv2.createTrackbar('T','thresh',0,255,nothing)
+    while(1):
+        cv2.imshow('thresh',thresh)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+            # get current positions of four trackbars
+        T = cv2.getTrackbarPos('T','thresh')
+        retval,thresh = cv2.threshold(mat,T,255,cv2.THRESH_BINARY)    
+
+    retval,thresh = cv2.threshold(mat,T,1,cv2.THRESH_BINARY)    
+    cv2.destroyAllWindows()
+
+    return thresh, T
+
+def thresh_adjust_otsu_inv(mat):
+    retval,thresh = cv2.threshold(mat,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+    
+    cv2.namedWindow('thresh',cv2.WINDOW_NORMAL)
+    cv2.createTrackbar('T','thresh',0,255,nothing)
+    while(1):
+        cv2.imshow('thresh',thresh)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+            # get current positions of four trackbars
+        T = cv2.getTrackbarPos('T','thresh')
+
+        retval,thresh = cv2.threshold(mat,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+        retval,thresh = cv2.threshold(mat,retval+T,255,cv2.THRESH_BINARY_INV)    
+
+    retval,thresh = cv2.threshold(mat,retval,1,cv2.THRESH_BINARY_INV)    
+    cv2.destroyAllWindows()
+
+    return thresh, T
+
+
+def thresh_adjust_otsu(mat):
+    retval,thresh = cv2.threshold(mat,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    
+    cv2.namedWindow('thresh',cv2.WINDOW_NORMAL)
+    cv2.createTrackbar('T','thresh',0,255,nothing)
+    while(1):
+        cv2.imshow('thresh',thresh)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+            # get current positions of four trackbars
+        T = cv2.getTrackbarPos('T','thresh')
+
+        retval,thresh = cv2.threshold(mat,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        retval,thresh = cv2.threshold(mat,retval-T,255,cv2.THRESH_BINARY)    
+
+    retval,thresh = cv2.threshold(mat,retval,1,cv2.THRESH_BINARY)    
+    cv2.destroyAllWindows()
+
+    return thresh, T
+
+hn = 0
+vn = 0
+hT = 127
+vT = 127
+
+an = 3
+Ln = 1
+aT = 127
+LT = 127
+
+for year in range(2012,2013):
+    treatfile='../../pics/{}/treatments{}cotton.csv'.format(year,year)
+    with open(treatfile, 'rb') as fi:
+        reader = csv.reader(fi)
+        for row in reader:
+            plot = int(row[0])
+            sector = int(row[1])
+            doy = int(row[2])
+            block = int(row[3])  
+            water = int(row[4])
+            img=testread(year,doy,plot)
+            if (img==None):
+                pass
+            else:
+                while np.size(img)>5000000:
+                    img=cv2.pyrDown(cv2.pyrDown(img))
+                hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+                lab=cv2.cvtColor(img,cv2.COLOR_BGR2LAB)
+                h,s,v=cv2.split(hsv)
+                L,a,b=cv2.split(lab)
+                retval,vt = cv2.threshold(v,0,1,cv2.THRESH_TOZERO+cv2.THRESH_OTSU)
+#                kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*vn+1,2*vn+1))
+#                vt = cv2.morphologyEx(vt, cv2.MORPH_OPEN, kernel)
+                litfrac = float(np.sum(vt>0))/float(np.size(vt))
+                print litfrac, retval, np.mean(v[vt>0]), np.mean(v[vt==0])
+                
+
+                testwrite(v,year,doy,plot, "V_")
+                testwrite(vt*255,year,doy,plot, "VT_")
+                retval,ht = cv2.threshold(h,0,1,cv2.THRESH_TOZERO+cv2.THRESH_OTSU)
+#                kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*hn+1,2*hn+1))
+#                ht = cv2.morphologyEx(ht, cv2.MORPH_OPEN, kernel)
+                vegfrac = float(np.sum(ht>0))/float(np.size(ht))
+                print vegfrac, retval, np.mean(h[ht>0]), np.mean(h[ht==0])
+                
+
+                testwrite(h,year,doy,plot, "H_")
+                testwrite(ht*255,year,doy,plot, "HT_")
+                retval,Lt = cv2.threshold(L,0,1,cv2.THRESH_TOZERO+cv2.THRESH_OTSU)
+#                kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*Ln+1,2*Ln+1))
+#                Lt = cv2.morphologyEx(Lt, cv2.MORPH_OPEN, kernel)
+                litfrac = float(np.sum(Lt>0))/float(np.size(Lt))
+                print litfrac, retval, np.mean(L[Lt>0]), np.mean(L[Lt==0])
+                
+
+                testwrite(L,year,doy,plot, "L_")
+                testwrite(Lt*255,year,doy,plot, "LT_")
+                retval,at = cv2.threshold(a,0,1,cv2.THRESH_TOZERO_INV+cv2.THRESH_OTSU)
+#                kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*an+1,2*an+1))
+#                at = cv2.morphologyEx(at, cv2.MORPH_OPEN, kernel)
+                vegfrac = float(np.sum(at>0))/float(np.size(at))
+                print vegfrac, retval, np.mean(a[at>0]), np.mean(a[at==0])
+                
+
+                testwrite(a,year,doy,plot, "A_")
+                testwrite(at*255,year,doy,plot, "AT_")

@@ -1,0 +1,13 @@
+Date: 3.21.2013
+
+Temperature readings from P1- diseased are:
+26.1,25.4,25.2,25.0, 25.1, 26.1, 25.4, 24.7, 25.4
+
+
+Temperature readings from P6:
+24.2, 24.3, 24.6, 24.3, 24.1, 24.8
+
+Emissivity was 0.98
+
+Sky was clear
+Wind was approximately 15 mph

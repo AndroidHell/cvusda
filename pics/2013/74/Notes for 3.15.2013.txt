@@ -1,0 +1,14 @@
+Date:3.15.2013-
+
+Temperature readings for P1- diseased innoculated in the fall of 2012:
+33.0, 32.9, 33.0, 32.5, 35.0, 32.6
+
+Temperature readings for P6- control plot, not innoculated:
+28.8, 29.2, 29.5, 29.0, 29.8, 32.3
+
+All temperature data is in degress Celsius. Time of day taken was 2:12 and 2:29 (1 hour later than
+camera stamp due to daylight savings time change and camera time not changed).
+
+The sun was behind a thin layer of clouds when taking temperature measurements and
+digital image on Plot 6.
+

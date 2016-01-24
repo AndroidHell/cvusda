@@ -1,0 +1,192 @@
+import cv2
+import numpy as np
+import os
+import csv
+
+def testwrite(img,year,doy,plot, pfx):
+    oname = "../../pics/{}/{}/{}{}.JPG".format(year,doy,pfx,plot) 
+    retval=cv2.imwrite(oname,img)
+    print "Wrote ", oname, retval        
+
+def testread(year,doy,plot):
+    imname = "../../pics/{}/{}/{}.JPG".format(year,doy,plot) 
+    img = cv2.imread(imname)
+    if img==None:
+        imname = "../../pics/{}/{}/{}.jpg".format(year,doy,plot)
+        img = cv2.imread(imname)
+    if img==None:
+        imname = "../../pics/{}/{}/P{}.JPG".format(year,doy,plot)
+        img = cv2.imread(imname)
+    if img != None:
+        print "Read ", imname
+    return img
+
+def nothing(x):
+    pass
+
+def normalize(x):
+    y=(x-np.min(x))/(np.max(x)-np.min(x))*255
+    return y
+def labels_to_rgb_2(labels,rows,cols):
+    
+    R=np.uint8((labels==0)*255)
+    G=np.uint8((labels==1)*255)
+    B=np.uint8(np.zeros(G.shape))
+    B=B.reshape((rows,cols))
+    G=G.reshape((rows,cols))
+    R=R.reshape((rows,cols))
+    
+    segment=np.uint8(cv2.merge((B,G,R)))
+
+    return segment
+
+def labels_to_rgb(labels,rows,cols):
+    
+    B=(labels==0)*255
+    G=(labels==1)*255
+    R=(labels==2)*255
+    
+    B=B+(labels==3)*255
+    G=G+(labels==3)*255
+    R=R+(labels==3)*255
+    
+    B=B.reshape((rows,cols))
+    G=G.reshape((rows,cols))
+    R=R.reshape((rows,cols))
+    
+    segment=np.uint8(cv2.merge((B,G,R)))
+
+    return segment
+
+def em_2class(mat):
+    rows, cols = np.shape(mat)
+    test = mat.reshape((np.size(mat),1))
+    em = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+    ret, ll, result, probs = em.train(test)
+    segment=labels_to_rgb_2(result,rows,cols)
+    return segment, em
+    
+h0=[0]
+h25=[0]
+h50=[0]
+h75=[0]
+vall=[0]
+
+for year in range(2012,2013):
+    treatfile='../../pics/{}/treatments{}cotton.csv'.format(year,year)
+    with open(treatfile, 'rb') as fi:
+        reader = csv.reader(fi)
+        for row in reader:
+            plot = int(row[0])
+            sector = int(row[1])
+            doy = int(row[2])
+            block = int(row[3])  
+            water = int(row[4])
+            img=testread(year,doy,plot)
+            if img==None:
+                pass
+            else:
+                img=cv2.pyrDown(cv2.pyrDown(img))
+                img=cv2.pyrDown(cv2.pyrDown(img))
+                
+                hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+                h,s,v=cv2.split(hsv)
+                if water==0:
+                    h0=np.vstack([h0,h.reshape((np.size(h),1))])
+                    vall=np.vstack([vall,v.reshape((np.size(v),1))])           
+                elif water==25:
+                    h25=np.vstack([h25,h.reshape((np.size(h),1))])
+                    vall=np.vstack([vall,v.reshape((np.size(v),1))])
+                elif water==50:
+                    h50=np.vstack([h50,h.reshape((np.size(h),1))])
+                    vall=np.vstack([vall,v.reshape((np.size(v),1))])
+                else:
+                    h75=np.vstack([h75,h.reshape((np.size(h),1))])
+                    vall=np.vstack([vall,v.reshape((np.size(v),1))])
+        
+        emh0 = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh0.train(h0)
+
+        emh25 = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh25.train(h25)
+
+        emh50 = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh50.train(h50)
+
+        emh75 = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh75.train(h75)
+
+        emvall = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emvall.train(vall)
+    
+h33i=[0]
+h33o=[0]
+h67i=[0]
+h67o=[0]
+h100i=[0]
+h100o=[0]
+    
+vall=[0]
+
+for year in range(2011,2012):
+    treatfile='../../pics/{}/treatments{}.csv'.format(year,year)
+    with open(treatfile, 'rb') as fi:
+        reader = csv.reader(fi)
+        for row in reader:
+            plot = int(row[0])
+            sector = int(row[1])
+            doy = int(row[2])
+            infect = int(row[3])
+            water = int(row[4])
+            block = int(row[5])  
+            img=testread(year,doy,plot)
+            if img==None:
+                pass
+            else:
+                img=cv2.pyrDown(cv2.pyrDown(img))
+                hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+                h,s,v=cv2.split(hsv) 
+                testwrite(v,year,doy,plot, "V_")
+                testwrite(h,year,doy,plot, "H_")
+
+                if infect==1:
+                    if water==33:
+                        h33i=np.vstack([h33i,h.reshape((np.size(h),1))])
+                        vall=np.vstack([vall,v.reshape((np.size(v),1))])
+                    elif water==67:
+                        h67i=np.vstack([h67i,h.reshape((np.size(h),1))])
+                        vall=np.vstack([vall,v.reshape((np.size(v),1))])        
+                    else:   
+                        h100i=np.vstack([h100i,h.reshape((np.size(h),1))])
+                        vall=np.vstack([vall,v.reshape((np.size(v),1))])
+                else:
+                    if water==33:
+                        h33o=np.vstack([h33o,h.reshape((np.size(h),1))])
+                        vall=np.vstack([vall,v.reshape((np.size(v),1))])
+                    elif water==67:
+                        h67o=np.vstack([h67o,h.reshape((np.size(h),1))])
+                        vall=np.vstack([vall,v.reshape((np.size(v),1))])        
+                    else:   
+                        h100o=np.vstack([h100o,h.reshape((np.size(h),1))])
+                        vall=np.vstack([vall,v.reshape((np.size(v),1))])
+
+        emh33i = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh33i.train(h33i)
+
+        emh67i = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh67i.train(h67i)
+
+        emh100i = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh100i.train(h100i)
+
+        emh33o = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh33o.train(h33o)
+
+        emh67o = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh67o.train(h67i)
+
+        emh100o = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh100o.train(h100o)
+
+        emvall = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emvall.train(vall)

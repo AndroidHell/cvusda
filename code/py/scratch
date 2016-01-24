@@ -1,0 +1,72 @@
+
+                if water==0:
+                    h0=np.vstack([h0,h.reshape((np.size(h),1))])
+                    vall=np.vstack([vall,v.reshape((np.size(v),1))])           
+                elif water==25:
+                    h25=np.vstack([h25,h.reshape((np.size(h),1))])
+                    vall=np.vstack([vall,v.reshape((np.size(v),1))])
+                elif water==50:
+                    h50=np.vstack([h50,h.reshape((np.size(h),1))])
+                    vall=np.vstack([vall,v.reshape((np.size(v),1))])
+                else:
+                    h75=np.vstack([h75,h.reshape((np.size(h),1))])
+                    vall=np.vstack([vall,v.reshape((np.size(v),1))])
+        print 'Training EM H 0'
+        emh0 = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh0.train(h0)
+        print 'Training EM H 25'
+        emh25 = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh25.train(h25)
+        print 'Training EM H 50'        
+        emh50 = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh50.train(h50)
+        print 'Training EM H 75'
+        emh75 = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emh75.train(h75)
+        print 'Training EM V'
+        emvall = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+        ret, ll, result, probs = emvall.train(vall)
+
+                rows, cols = np.shape(h)
+                test = h.reshape((np.size(h),1))
+                nn = np.size(test)
+                result0 = np.zeros([nn,2])
+                result25 = np.zeros([nn,2])
+                result50 = np.zeros([nn,2])
+                result75 = np.zeros([nn,2])
+                resultall = np.zeros([nn,2])
+                for i in range(0,nn):
+                    result0[i,:], probs = emh0.predict(test[i])
+                    result25[i,:], probs = emh25.predict(test[i])
+                    result50[i,:], probs = emh50.predict(test[i])
+                    result75[i,:], probs = emh75.predict(test[i])
+                sll=np.zeros([1,4])
+                loc=np.zeros([1,4])
+                
+                sll[0,0]=sum(result0[:,0])
+                sll[0,1]=sum(result25[:,0])
+                sll[0,2]=sum(result50[:,0])
+                sll[0,3]=sum(result75[:,0])
+                
+                loc = np.argsort(sll[0,:]) 
+                maxloc=loc[0]
+                if maxloc==0:
+                    estWater=0
+                    result=result0
+                elif maxloc==1:
+                    estWater=25
+                    result=result25
+                elif maxloc==2:
+                    estWater=50
+                    result=result50
+                else:
+                    estWater=75
+                    result=result75
+                test = v.reshape((np.size(v),1))
+                for i in range(0,nn):
+                    resultall[i,:], probs = emvall.predict(test[i])
+                segment=labels_to_rgb_2(result[:,1],rows,cols)
+                pfx="HEM{}_".format(estWater)
+                testwrite(segment,year,doy,plot,pfx)
+                segment=labels_to_rgb_2(resultall[:,1],rows,cols)
+                testwrite(segment,year,doy,plot, "VEM_ALL")

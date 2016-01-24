@@ -1,0 +1,12 @@
+#!/bin/bash
+apt-get update
+apt-get upgrade
+apt-get install emacs
+apt-get install cmake
+apt-get install python-dev
+apt-get install libopencv-dev
+apt-get install python-opencv
+apt-get install numpy
+apt-get install scipy
+apt-get install git
+

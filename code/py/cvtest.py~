@@ -1,0 +1,260 @@
+import cv2
+import numpy as np
+import os
+import csv
+
+def testwrite(img,year,doy,plot, pfx):
+    oname = "../../pics/{}/{}/{}{}.JPG".format(year,doy,pfx,plot) 
+    retval=cv2.imwrite(oname,img)
+    print "Wrote ", oname, retval        
+
+def testread(year,doy,plot):
+    imname = "../../pics/{}/{}/{}.JPG".format(year,doy,plot) 
+    img = cv2.imread(imname)
+    if img==None:
+        imname = "../../pics/{}/{}/{}.jpg".format(year,doy,plot)
+        img = cv2.imread(imname)
+    if img==None:
+        imname = "../../pics/{}/{}/P{}.JPG".format(year,doy,plot)
+        img = cv2.imread(imname)
+    if img != None:
+        print "Read ", imname
+    return img
+
+def nothing(x):
+    pass
+
+def normalize(x):
+    y=(x-np.min(x))/(np.max(x)-np.min(x))*255
+    return y
+
+def opening_adjust(mat):
+
+    kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+
+    cv2.namedWindow('open')
+    opening = cv2.morphologyEx(mat, cv2.MORPH_OPEN, kernel)
+    cv2.createTrackbar('n','open',0,50,nothing)
+    while(1):
+        cv2.imshow('open',opening)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+        n = cv2.getTrackbarPos('n','open')
+        kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*n+1,2*n+1))
+        opening = cv2.morphologyEx(mat, cv2.MORPH_OPEN, kernel)
+
+    cv2.destroyAllWindows()
+
+    return opening, n
+
+def thresh_adjust(mat,thresholdType):
+    t = 60
+    retval, at = cv2.threshold(mat, t,255,thresholdType)
+    
+    cv2.namedWindow('thresh')
+    cv2.createTrackbar('T','thresh',0,255,nothing)
+    while(1):
+        cv2.imshow('thresh',at)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+        t = cv2.getTrackbarPos('T','thresh')
+        retval,at = cv2.threshold(mat, t,255,thresholdType)
+
+    cv2.destroyAllWindows()
+
+    return at, t
+
+def adaptive_thresh_adjust(mat,thresholdType,adaptiveMethod):
+    C = 0
+    blockSize = 7
+    blockSize = 2*blockSize+1
+    rows,cols = np.shape(mat)
+    maxBS=int(np.sqrt(float(rows*cols)/2))
+    at = cv2.adaptiveThreshold(mat,255,adaptiveMethod, thresholdType,blockSize,C)
+    cv2.namedWindow('thresh')
+    cv2.createTrackbar('C','thresh',0,255,nothing)
+    cv2.createTrackbar('blockSize','thresh',1,maxBS,nothing)
+    while(1):
+        cv2.imshow('thresh',at)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+        C = cv2.getTrackbarPos('C','thresh')-127
+        blockSize = cv2.getTrackbarPos('blockSize','thresh')
+        blockSize = max(3,2*blockSize+1)
+        
+        at = cv2.adaptiveThreshold(mat,255,adaptiveMethod, thresholdType,blockSize,C)
+
+    cv2.destroyAllWindows()
+
+    return at, C, blockSize
+def labels_to_rgb_2(labels,rows,cols):
+    
+    R=np.uint8((labels==0)*255)
+    G=np.uint8((labels==1)*255)
+    B=np.uint8(np.zeros(G.shape))
+    B=B.reshape((rows,cols))
+    G=G.reshape((rows,cols))
+    R=R.reshape((rows,cols))
+    
+    segment=np.uint8(cv2.merge((B,G,R)))
+
+    return segment
+
+def labels_to_rgb(labels,rows,cols):
+    
+    B=(labels==0)*255
+    G=(labels==1)*255
+    R=(labels==2)*255
+    
+    B=B+(labels==3)*255
+    G=G+(labels==3)*255
+    R=R+(labels==3)*255
+    
+    B=B.reshape((rows,cols))
+    G=G.reshape((rows,cols))
+    R=R.reshape((rows,cols))
+    
+    segment=np.uint8(cv2.merge((B,G,R)))
+
+    return segment
+
+def em_2class(mat):
+    rows, cols = np.shape(mat)
+    test = mat.reshape((np.size(mat),1))
+    em = cv2.EM(2,cv2.EM_COV_MAT_DIAGONAL)
+    ret, ll, result, probs = em.train(test)
+    segment=labels_to_rgb_2(result,rows,cols)
+    return segment, em
+    
+
+blockSize = 151
+C = 0
+ablockSize = blockSize
+aC = C
+LblockSize = blockSize
+LC = C
+hblockSize = blockSize
+hC = C
+vblockSize = blockSize
+vC = C
+
+for year in range(2011,2013):
+    treatfile='../../pics/{}/treatments{}.csv'.format(year,year)
+    with open(treatfile, 'rb') as fi:
+        reader = csv.reader(fi)
+        for row in reader:
+            plot = int(row[0])
+            sector = int(row[1])
+            doy = int(row[2])
+            infect = int(row[3])
+            water = int(row[4])
+            block = int(row[5])  
+            img=testread(year,doy,plot)
+            if img==None:
+                pass
+            else:
+                img=cv2.pyrDown(cv2.pyrDown(img))
+                hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+                h,s,v=cv2.split(hsv) 
+                lab=cv2.cvtColor(img,cv2.COLOR_BGR2LAB)
+                L,a,b=cv2.split(lab)
+
+                Lt = cv2.adaptiveThreshold(L,1,cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,LblockSize,LC)
+                litfrac = float(np.sum(Lt>0))/float(np.size(Lt))
+                print litfrac
+                if litfrac>0.8:
+                    Lt = cv2.adaptiveThreshold(L,1,cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,LblockSize*2+1,LC)
+                    litfrac = float(np.sum(Lt>0))/float(np.size(Lt))
+                    print litfrac
+
+                img2 = img.copy()
+
+                img3 = img.copy()
+
+                contours, hierarchy = cv2.findContours(Lt,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+                nn=np.size(contours)
+                for i in range(0,nn):
+                    cv2.drawContours(img2, contours, i, (0,0,255), 1)
+                testwrite(L,year,doy,plot, "L_")
+                testwrite(img2,year,doy,plot, "LT_")
+                    
+                ht = cv2.adaptiveThreshold(h,1,cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV,hblockSize,hC)
+                vegfrac = float(np.sum(ht>0))/float(np.size(ht))
+                print vegfrac
+                if vegfrac>0.7:
+                    ht = cv2.adaptiveThreshold(h,1,cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV,hblockSize*2+1,hC)
+                    vegfrac = float(np.sum(ht>0))/float(np.size(ht))
+                
+                contours, hierarchy = cv2.findContours(ht,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+                nn=np.size(contours)
+                for i in range(0,nn):
+                    cv2.drawContours(img3, contours, i, (0,255,0), 1)
+                testwrite(h,year,doy,plot, "H_")
+                testwrite(img3,year,doy,plot, "HT_")
+                print vegfrac
+                
+                    #Lem,emL=em_2class(L)
+                    #testwrite(Lem,year,doy,plot, "EM_L_")
+    
+                    #hem,emh=em_2class(h)
+                    #testwrite(hem,year,doy,plot, "EM_H_")
+
+for year in range(2012,2013):
+    treatfile='../../pics/{}/treatments{}.csv'.format(year,year)
+    with open(treatfile, 'rb') as fi:
+        reader = csv.reader(fi)
+        for row in reader:
+            plot = int(row[0])
+            sector = int(row[1])
+            doy = int(row[2])
+            block = int(row[3])  
+            water = int(row[4])
+            img=testread(year,doy,plot)
+            if img==None:
+                pass
+            else:
+                img=cv2.pyrDown(cv2.pyrDown(img))
+                hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+                h,s,v=cv2.split(hsv) 
+                lab=cv2.cvtColor(img,cv2.COLOR_BGR2LAB)
+                L,a,b=cv2.split(lab)
+
+                Lt = cv2.adaptiveThreshold(L,1,cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,LblockSize,LC)
+                litfrac = float(np.sum(Lt>0))/float(np.size(Lt))
+                print litfrac
+
+                img2 = img.copy()
+
+                img3 = img.copy()
+
+                contours, hierarchy = cv2.findContours(Lt,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+                nn=np.size(contours)
+                for i in range(0,nn):
+                    cv2.drawContours(img2, contours, i, (0,0,255), 1)
+                testwrite(L,year,doy,plot, "L_")
+
+                testwrite(img2,year,doy,plot, "LT_")
+
+                ht = cv2.adaptiveThreshold(h,1,cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV,hblockSize,hC)
+                vegfrac = float(np.sum(ht>0))/float(np.size(ht))
+                print vegfrac
+
+                contours, hierarchy = cv2.findContours(ht,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+                nn=np.size(contours)
+                for i in range(0,nn):
+                    cv2.drawContours(img3, contours, i, (0,255,0), 1)
+                testwrite(h,year,doy,plot, "H_")
+                testwrite(img3,year,doy,plot, "HT_")
+
+
+                #Lem,emL=em_2class(L)
+                #testwrite(Lem,year,doy,plot, "EM_L_")
+
+                #hem,emh=em_2class(h)
+                #testwrite(hem,year,doy,plot, "EM_H_")

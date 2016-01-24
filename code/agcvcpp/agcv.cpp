@@ -1,0 +1,123 @@
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/ml/ml.hpp>
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+
+using namespace cv;
+using namespace std;
+
+class raspiCV{
+ private:
+  Mat image,hsv,h,v,hSeg,vSeg;
+  Scalar hMeanS, vegFracS, litFracS;
+
+  char imname[30];
+  char hOutname[30];
+  char vOutname[30];
+  vector<Mat> hsvsplit;
+  int n;
+ public:
+  int hT, vT;
+  double hMean, vegFrac, litFrac;
+  int retval;
+  raspiCV(void);
+  ~raspiCV(void);
+  int capture(int imnum);
+  int hvsplit(void);
+  int segment(void);
+  int compute(void);
+};
+
+raspiCV::raspiCV(void){
+  hT=0;
+  vT=0;
+}
+
+int raspiCV::capture(int imnum){
+  char numstr[10];
+  char command[100];
+  sprintf(numstr,"%04d",imnum);
+  strcpy(imname,"../pics/");
+  strcat(imname,numstr);
+  strcat(imname,".BMP");
+  cout << imname << std::endl;
+  strcpy(command,"raspistill -n -w 800 -h 600 -o ");
+  strcat(command,imname);
+
+  cout << command << std::endl;
+  system(command);
+  cout << "Captured" << std::endl;
+
+  image = imread(imname, CV_LOAD_IMAGE_COLOR); // Read the file
+  cout << "Reading file" << std::endl;
+
+  if(! image.data ){
+    cout <<  "Could not open or find the image" << std::endl ;
+    return -1;
+  }
+
+  strcpy(hOutname,"../pics/H");
+  strcat(hOutname,numstr);
+  strcat(hOutname,".BMP");
+
+  strcpy(vOutname,"../pics/V");
+  strcat(vOutname,numstr);
+  strcat(vOutname,".BMP");
+  
+  return 0;
+}
+
+int raspiCV::hvsplit(void){
+  cvtColor( image, hsv, CV_BGR2HSV );//convert to hsv
+
+  cout << "Converted" << std::endl;
+
+  split(hsv, hsvsplit);//split into channels
+  h = hsvsplit[0];
+  v = hsvsplit[2];
+  n=h.rows*h.cols;
+
+  cout << "Split" << std::endl;
+
+
+  return 0;
+}
+
+int raspiCV::segment(void){
+  threshold(h,hSeg,hT,255,THRESH_BINARY + THRESH_OTSU);
+  threshold(v,vSeg,vT,255,THRESH_BINARY + THRESH_OTSU);
+
+  cout << "Threshold" << std::endl;
+
+  imwrite(hOutname,hSeg);
+  imwrite(vOutname,vSeg);
+
+  return 0;
+}
+
+int raspiCV::compute(void){
+  retval = raspiCV::hvsplit();
+  retval = raspiCV::segment()+retval;
+
+  cout << "Mask" << std::endl;
+  vegFracS = mean(hSeg);
+  vegFrac = (vegFracS.val[0])/255.;
+  cout << vegFrac << " VegFrac" << std::endl;
+  hMeanS = mean(h,hSeg);
+  hMean = hMeanS.val[0];
+  cout << hMean << " MeanHue" << std::endl;
+  
+  cout << "Mask" << std::endl;
+  litFracS = mean(vSeg);
+  litFrac = (litFracS.val[0])/255.;
+  cout << litFrac << " LitFrac" << std::endl;
+  
+  return retval;  
+}
+
+
+raspiCV::~raspiCV(void){
+}
