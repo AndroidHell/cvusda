@@ -11,6 +11,7 @@ apt-get install scipy
 apt-get install git
 apt-get install libav-tools
 apt-get install python-picamera
+apt-get install python-smbus 
 
 wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.49.tar.gz
 tar -xvzf bcm2835-1.49.tar.gz
