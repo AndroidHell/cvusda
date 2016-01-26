@@ -1,6 +1,6 @@
 EXEC = mlx
-SRC = main.cpp tmp007.cpp mlx90614.cpp 
-INC_DIR = /usr/include/
+SRC = main.cpp tmp007.cpp mlx90614.cpp  
+INC_DIR = /usr/include/ 
 LIB_DIR = /usr/lib/
 LDLIBS = -lbcm2835
 CC = g++

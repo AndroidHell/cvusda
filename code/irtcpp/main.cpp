@@ -7,18 +7,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <linux/i2c-dev.h>
+//#include "./mlx90614.h"
 #include "./tmp007.h"
-#include "./mlx90614.h"
-
 int main(void){
 
-  MLX test;
+  TMP test;
   
-  test.readTemp();
+  test.objTemp();
 
-  TMP test2;
-
-  test2.objTemp();
 
   return 0;
 
