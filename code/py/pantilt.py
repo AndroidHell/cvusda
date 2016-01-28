@@ -23,62 +23,81 @@ screen.keypad(True)
 pwm = PWM(0x40)
 # Note if you'd like more debug output you can instead run:
 #pwm = PWM(0x40, debug=True)
-Camera = picamera.PiCamera() 
-ResX = 800
-ResY = 600
-Camera.vflip=True
-Camera.hflip=True
-Camera.resolution = (ResX, ResY)
-Camera.framerate = 30
+#Camera = picamera.PiCamera() 
+#ResX = 800
+#ResY = 600
+#Camera.vflip=True
+#Camera.hflip=True
+#Camera.resolution = (ResX, ResY)
+#Camera.framerate = 30
 # Wait for the automatic gain control to settle
-time.sleep(2)
+#time.sleep(2)
 # Now fix the values
 #self.Camera.shutter_speed = self.Camera.exposure_speed
 #self.Camera.exposure_mode = 'off'
 #g = self.Camera.awb_gains
 #self.Camera.awb_mode = 'off'
 #self.Camera.awb_gains = g    
-servoMin = 50  # Min pulse length out of 4096
-servoMax = 450  # Max pulse length out of 4096
+panMin = 80  # Min pulse length out of 4096
+panMax = 650  # Max pulse length out of 4096
+tiltMin = 80  # Min pulse length out of 4096
+tiltMax = 650  # Max pulse length out of 4096
 
-def setServoPulse(channel, pulse):
-  pulseLength = 1000000                   # 1,000,000 us per second
-  pulseLength /= 60                       # 60 Hz
-  print "%d us per period" % pulseLength
-  pulseLength /= 4096                     # 12 bits of resolution
-  print "%d us per bit" % pulseLength
-  pulse *= 1000
-  pulse /= pulseLength
-  pwm.setPWM(channel, 0, pulse)
-
+panChan=0
+tiltChan=1
 pwm.setPWMFreq(60)
 # Set frequency to 60 Hz
 
 Imname = '/var/www/html/webcam.jpg'
-pan = int(sys.argv[1])
-tilt = int(sys.argv[2])
-setServoPulse(0, pan)
-setServoPulse(1, tilt)
+pan = panMin
+tilt = tiltMin
+pwm.setPWM(panChan, 0, pan)
+pwm.setPWM(tiltChan, 0, tilt)
 time.sleep(1)
 print "Drone!"
-while True:
-  time.sleep(1)
+while False:
+  
   char=screen.getch()
   if char==113: break
   elif char== curses.KEY_RIGHT :
-    pan+=1
-    setServoPulse(0, pan)
-  elif char== curses.KEY_LEFT : 
     pan-=1
-    setServoPulse(0, pan)
+    pwm.setPWM(panChan, 0, pan)
+  elif char== curses.KEY_LEFT : 
+    pan+=1
+    pwm.setPWM(panChan, 0, pan)
   elif char== curses.KEY_UP :
-    tilt+=1
-    setServoPulse(1, tilt)
-  elif char== curses.KEY_DOWN :
     tilt-=1
-    setServoPulse(1, tilt)
-  else : pass
-  Camera.capture(Imname)
-                                         
+    pwm.setPWM(tiltChan, 0, tilt)
+  elif char== curses.KEY_DOWN :
+    tilt+=1
+    pwm.setPWM(tiltChan, 0, tilt)
+  else : pass                            
 
+while pan<panMax:
+  pan+=1
+  pwm.setPWM(panChan, 0, pan)
+  time.sleep(.01)
+  print pan, tilt
+while pan>panMin:
+  pan-=1
+  pwm.setPWM(panChan, 0, pan)
+  time.sleep(.01)
+  print pan, tilt
+pan=0
+pwm.setPWM(panChan, 0, pan)
 
+while tilt<tiltMax:
+  tilt+=1
+  pwm.setPWM(tiltChan, 0, tilt)
+  time.sleep(.01)
+  print pan, tilt
+while tilt>tiltMin:
+  tilt-=1
+  pwm.setPWM(tiltChan, 0, tilt)
+  time.sleep(.01)
+  print pan, tilt
+
+tilt=0
+pwm.setPWM(tiltChan, 0, tilt)
+
+curses.endwin()  
