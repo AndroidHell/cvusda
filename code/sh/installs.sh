@@ -14,13 +14,14 @@
 #apt-get install libi2c-dev
 #apt-get install apache2 php5 libapache2-mod-php5
 
-#wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.49.tar.gz
-#tar -xvzf bcm2835-1.49.tar.gz
-#cd bcm2835-1.49
-#./configure
-#make
-#make install
-#cd ~/
+##1.49 No me gusta
+##wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.49.tar.gz
+##tar -xvzf bcm2835-1.49.tar.gz
+##cd bcm2835-1.49
+##./configure
+##make
+##make install
+##cd ~/
 
 #git clone https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code.git
 #git clone https://github.com/joaquincasanova/cvusda.git

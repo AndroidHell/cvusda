@@ -1,8 +1,12 @@
+short int reverse_byte_order(short int);
+
 class MLX{
 private:
-  double tempfactor;
+  int fd;
+  double temp;
+  short unsigned int msg;
 public:
-  double readTemp();
+  double readTemp(); 
   MLX(void);
   ~MLX(void);
 };
