@@ -17,8 +17,8 @@ class PanTilt(object):
         self.tiltChan=1
         self.pwm.setPWMFreq(60)
         # Set frequency to 60 Hz
-        self.pan = self.panMin
-        self.tilt = self.tiltMin
+        self.pan = (self.panMin+self.panMax)/2
+        self.tilt = (self.tiltMin+self.tiltMax)/2
         self.pwm.setPWM(self.panChan, 0, self.pan)
         self.pwm.setPWM(self.tiltChan, 0, self.tilt)
         time.sleep(1)
@@ -54,6 +54,3 @@ class PanTilt(object):
                 self.tilt+=1
                 self.pwm.setPWM(self.tiltChan, 0, self.tilt)
             else : pass                            
-
-test=PanTilt()
-test.drone()
